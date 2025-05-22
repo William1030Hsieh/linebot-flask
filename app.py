@@ -4,6 +4,9 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from linebot.models import ImageMessage
 import os
+from collections import Counter
+import cv2
+import numpy as np
 
 app = Flask(__name__)
 
@@ -40,17 +43,53 @@ def handle_image(event):
             f.write(chunk)
 
     # 呼叫模型分析（目前回傳假資料，你日後可替換成模型推論）
-    result_text = detect_pills(image_path)
+    result = detect_pills(image_path)
 
     # 回傳結果給使用者
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=result_text)
+        TextSendMessage(text=result)
     )
 
 def detect_pills(image_path):
-    # 這是示意函式，實際請連接你的模型處理邏輯
-    return "藍色膠囊 2 顆，白色錠劑 3 顆"
+    image = cv2.imread(image_path)
+    output = image.copy()
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (11, 11), 0)
+    edged = cv2.Canny(blurred, 30, 150)
+    edged = cv2.dilate(edged, None, iterations=2)
+    edged = cv2.erode(edged, None, iterations=1)
+    contours, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    pill_info = []
+
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area < 100:
+            continue
+
+        (x, y), radius = cv2.minEnclosingCircle(contour)
+        shape = "圓形" if 0.9 <= radius/np.sqrt(area/np.pi) <= 1.1 else "橢圓/長條"
+
+        mask = np.zeros(gray.shape, dtype="uint8")
+        cv2.drawContours(mask, [contour], -1, 255, -1)
+        mean_color = cv2.mean(image, mask=mask)[:3]
+        b, g, r = mean_color
+        color = "白色"
+        if r > 150 and g < 100 and b < 100:
+            color = "紅色"
+        elif b > 150 and r < 100:
+            color = "藍色"
+        elif r > 200 and g > 200 and b > 200:
+            color = "白色"
+        elif g > 150 and r < 100:
+            color = "綠色"
+
+        pill_info.append((color, shape))
+
+    count = Counter(pill_info)
+    result_lines = [f"{color}{shape}：{cnt} 顆" for (color, shape), cnt in count.items()]
+    return "\n".join(result_lines) if result_lines else "未偵測到藥物"
 
 
 @handler.add(MessageEvent, message=TextMessage)
