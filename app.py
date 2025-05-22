@@ -6,8 +6,8 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage
 app = Flask(__name__)
 
 # 請換成你自己的
-line_bot_api = LineBotApi('你的 LINE Channel Access Token')
-handler = WebhookHandler('你的 LINE Channel Secret')
+line_bot_api = LineBotApi('TpWEfFJFfCvB9ZASbD+ho5Qqnx1nI3hXWXfK5/XUz13hZNVf1NX1YoBXvkOpVgTSXVvyziRtXRo5MXRJ91h5n4IMps991+RhECQV44SgNewWoteSAHLU/lGogMQiK1JD98UP+HG9Zbsit40rc13dVgdB04t89/1O/w1cDnyilFU=')
+handler = WebhookHandler('b4f29d84ef99d4145e5ee81397ce5177')
 
 @app.route("/")
 def home():
@@ -20,7 +20,8 @@ def callback():
 
     try:
         handler.handle(body, signature)
-    except:
+    except Exception as e:
+        print("Error:", e)
         abort(400)
 
     return 'OK'
@@ -30,12 +31,12 @@ def handle_message(event):
     user_text = event.message.text
 
     # 模擬呼叫外部API
-    response = requests.post("https://httpbin.org/post", json={"text": user_text})
-    reply_text = f"你說的是：{user_text}"
+    #response = requests.post("https://httpbin.org/post", json={"text": user_text})
+    #reply_text = f"你說的是：{user_text}"
 
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=reply_text)
+        TextSendMessage(text=f"你說的是:{user_text}")
     )
 
 if __name__ == "__main__":
