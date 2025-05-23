@@ -7,6 +7,7 @@ import os
 from collections import Counter
 import cv2
 import numpy as np
+opencv- python
 
 app = Flask(__name__)
 
