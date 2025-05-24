@@ -1,6 +1,4 @@
-tensorflow
-opencv-python-headless
 flask
 line-bot-sdk
-numpy
-gunicorn
+opencv-python-headless
+tensorflow

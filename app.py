@@ -1,18 +1,17 @@
+
 from flask import Flask, request, abort, send_file
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, ImageMessage, TextSendMessage, ImageSendMessage
+from linebot.models import MessageEvent, ImageMessage, TextSendMessage, ImageSendMessage
 import os
 import cv2
 import numpy as np
-from collections import Counter
-from tensorflow.keras.models import load_model
 import tensorflow as tf
 
 app = Flask(__name__)
 
-line_bot_api = LineBotApi('TpWEfFJFfCvB9ZASbD+ho5Qqnx1nI3hXWXfK5/XUz13hZNVf1NX1YoBXvkOpVgTSXVvyziRtXRo5MXRJ91h5n4IMps991+RhECQV44SgNewWoteSAHLU/lGogMQiK1JD98UP+HG9Zbsit40rc13dVgdB04t89/1O/w1cDnyilFU=')
-handler = WebhookHandler('b4f29d84ef99d4145e5ee81397ce5177')
+line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')
+handler = WebhookHandler('YOUR_CHANNEL_SECRET')
 
 interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
 interpreter.allocate_tensors()
@@ -20,12 +19,9 @@ input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
 
-model = load_model("pill_classifier_model.h5")
-class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
-
 @app.route("/")
 def home():
-    return "LINE Bot is running!"
+    return "LINE Bot with TFLite model is running."
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -78,19 +74,17 @@ def detect_pills(image_path):
             continue
         roi = image[y:y+h, x:x+w]
         roi_resized = cv2.resize(roi, (224, 224))
-        input_array = np.expand_dims(roi_resized / 255.0, axis=0)
-        interpreter.set_tensor(input_details[0]['index'], input_array.astype(np.float32))
+        input_array = np.expand_dims(roi_resized / 255.0, axis=0).astype(np.float32)
+        interpreter.set_tensor(input_details[0]['index'], input_array)
         interpreter.invoke()
         output_data = interpreter.get_tensor(output_details[0]['index'])
         class_id = int(np.argmax(output_data))
-        #pred = model.predict(input_array, verbose=0)
-        #class_id = np.argmax(pred)
         label = class_labels[class_id]
         counts[label] += 1
         cv2.rectangle(output, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        cv2.putText(output, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36,255,12), 2)
+        cv2.putText(output, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (36,255,12), 2)
 
-    result_text = "\n".join([f"{k}ï¼{v} é¡" for k, v in counts.items() if v > 0])
+    result_text = "\n".join([f"{k}：{v} 顆" for k, v in counts.items() if v > 0])
     cv2.imwrite("annotated_pills.jpg", output)
     return result_text, "annotated_pills.jpg"
 
