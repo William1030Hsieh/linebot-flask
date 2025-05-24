@@ -7,11 +7,18 @@ import cv2
 import numpy as np
 from collections import Counter
 from tensorflow.keras.models import load_model
+import tensorflow as tf
 
 app = Flask(__name__)
 
 line_bot_api = LineBotApi('TpWEfFJFfCvB9ZASbD+ho5Qqnx1nI3hXWXfK5/XUz13hZNVf1NX1YoBXvkOpVgTSXVvyziRtXRo5MXRJ91h5n4IMps991+RhECQV44SgNewWoteSAHLU/lGogMQiK1JD98UP+HG9Zbsit40rc13dVgdB04t89/1O/w1cDnyilFU=')
 handler = WebhookHandler('b4f29d84ef99d4145e5ee81397ce5177')
+
+interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
+interpreter.allocate_tensors()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
 
 model = load_model("pill_classifier_model.h5")
 class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
@@ -72,8 +79,12 @@ def detect_pills(image_path):
         roi = image[y:y+h, x:x+w]
         roi_resized = cv2.resize(roi, (224, 224))
         input_array = np.expand_dims(roi_resized / 255.0, axis=0)
-        pred = model.predict(input_array, verbose=0)
-        class_id = np.argmax(pred)
+        interpreter.set_tensor(input_details[0]['index'], input_array.astype(np.float32))
+        interpreter.invoke()
+        output_data = interpreter.get_tensor(output_details[0]['index'])
+        class_id = int(np.argmax(output_data))
+        #pred = model.predict(input_array, verbose=0)
+        #class_id = np.argmax(pred)
         label = class_labels[class_id]
         counts[label] += 1
         cv2.rectangle(output, (x, y), (x+w, y+h), (0, 255, 0), 2)
