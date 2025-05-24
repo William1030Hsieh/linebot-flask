@@ -6,15 +6,15 @@ import os
 import cv2
 import numpy as np
 from collections import Counter
+from tensorflow.keras.models import load_model
 
 app = Flask(__name__)
 
-# 請將以下兩個參數改成你自己的 LINE BOT 設定
-LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
-LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
-# 請換成你自己的
 line_bot_api = LineBotApi('TpWEfFJFfCvB9ZASbD+ho5Qqnx1nI3hXWXfK5/XUz13hZNVf1NX1YoBXvkOpVgTSXVvyziRtXRo5MXRJ91h5n4IMps991+RhECQV44SgNewWoteSAHLU/lGogMQiK1JD98UP+HG9Zbsit40rc13dVgdB04t89/1O/w1cDnyilFU=')
 handler = WebhookHandler('b4f29d84ef99d4145e5ee81397ce5177')
+
+model = load_model("pill_classifier_model.h5")
+class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
 
 @app.route("/")
 def home():
@@ -56,49 +56,30 @@ def send_image():
 def detect_pills(image_path):
     image = cv2.imread(image_path)
     output = image.copy()
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edged = cv2.Canny(blurred, 40, 120)
-    edged = cv2.dilate(edged, None, iterations=2)
+    blur = cv2.GaussianBlur(gray, (7, 7), 0)
+    edged = cv2.Canny(blur, 50, 150)
+    edged = cv2.dilate(edged, None, iterations=1)
     edged = cv2.erode(edged, None, iterations=1)
 
     contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    categories = []
+    counts = {label: 0 for label in class_labels}
 
-    for contour in contours:
-        area = cv2.contourArea(contour)
-        if area < 300 or area > 5000:
+    for cnt in contours:
+        x, y, w, h = cv2.boundingRect(cnt)
+        if w * h < 500:
             continue
+        roi = image[y:y+h, x:x+w]
+        roi_resized = cv2.resize(roi, (224, 224))
+        input_array = np.expand_dims(roi_resized / 255.0, axis=0)
+        pred = model.predict(input_array, verbose=0)
+        class_id = np.argmax(pred)
+        label = class_labels[class_id]
+        counts[label] += 1
+        cv2.rectangle(output, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        cv2.putText(output, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36,255,12), 2)
 
-        mask = np.zeros(gray.shape, dtype="uint8")
-        cv2.drawContours(mask, [contour], -1, 255, -1)
-        mean_hsv = cv2.mean(hsv, mask=mask)[:3]
-        h, s, v = mean_hsv
-
-        if (h < 10 or h > 170) and s > 100 and v > 100:
-            label = "紅色小膠囊"
-            color = (0, 0, 255)
-        elif s < 50 and v > 160:
-            label = "白色長條膠囊"
-            color = (255, 255, 255)
-        elif 35 <= h <= 95 and s > 60 and 50 < v < 180:
-            label = "綠色長條膠囊"
-            color = (0, 255, 0)
-        else:
-            label = "其他"
-            color = (128, 128, 128)
-
-        categories.append(label)
-        M = cv2.moments(contour)
-        if M["m00"] != 0:
-            cX = int(M["m10"] / M["m00"])
-            cY = int(M["m01"] / M["m00"])
-            cv2.putText(output, label, (cX-40, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-        cv2.drawContours(output, [contour], -1, color, 2)
-
-    count = Counter(categories)
-    result_text = "\n".join([f"{label}：{count[label]} 顆" for label in sorted(count)])
+    result_text = "\n".join([f"{k}ï¼{v} é¡" for k, v in counts.items() if v > 0])
     cv2.imwrite("annotated_pills.jpg", output)
     return result_text, "annotated_pills.jpg"
 
