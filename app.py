@@ -13,19 +13,7 @@ app = Flask(__name__)
 line_bot_api = LineBotApi('TpWEfFJFfCvB9ZASbD+ho5Qqnx1nI3hXWXfK5/XUz13hZNVf1NX1YoBXvkOpVgTSXVvyziRtXRo5MXRJ91h5n4IMps991+RhECQV44SgNewWoteSAHLU/lGogMQiK1JD98UP+HG9Zbsit40rc13dVgdB04t89/1O/w1cDnyilFU=')
 handler = WebhookHandler('b4f29d84ef99d4145e5ee81397ce5177')
 
-interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
-interpreter.allocate_tensors()
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
-class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
 
-model = tf.keras.models.load_model("pill_classifier_model.h5")
-
-converter = tf.lite.TFLiteConverter.from_saved_model('pill_classifier_model.tflite')
-tflite_model = converter.convert()
-
-converter = tf.lite.TFLiteConverter.from_keras_model(model)
-tflite_model = converter.convert()
 
 try:
     interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
@@ -68,6 +56,14 @@ def handle_image(event):
             ImageSendMessage(
                 original_content_url=request.url_root + "image",
                 preview_image_url=request.url_root + "image"
+                model = tf.keras.models.load_model("pill_classifier_model.h5")
+                model = tf.keras.models.load_model("pill_classifier_model.h5")
+
+                converter = tf.lite.TFLiteConverter.from_saved_model('pill_classifier_model.tflite')
+                tflite_model = converter.convert()
+
+                converter = tf.lite.TFLiteConverter.from_keras_model(model)
+tflite_model = converter.convert()
             )
         ]
     )
@@ -104,6 +100,11 @@ def detect_pills(image_path):
         cv2.rectangle(output, (x, y), (x+w, y+h), (0, 255, 0), 2)
         cv2.putText(output, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (36,255,12), 2)
 
+        interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
+interpreter.allocate_tensors()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
     result_text = "\n".join([f"{k}：{v} 顆" for k, v in counts.items() if v > 0])
     cv2.imwrite("annotated_pills.jpg", output)
     return result_text, "annotated_pills.jpg"
