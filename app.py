@@ -10,14 +10,22 @@ import tensorflow as tf
 
 app = Flask(__name__)
 
-line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')
-handler = WebhookHandler('YOUR_CHANNEL_SECRET')
+line_bot_api = LineBotApi('TpWEfFJFfCvB9ZASbD+ho5Qqnx1nI3hXWXfK5/XUz13hZNVf1NX1YoBXvkOpVgTSXVvyziRtXRo5MXRJ91h5n4IMps991+RhECQV44SgNewWoteSAHLU/lGogMQiK1JD98UP+HG9Zbsit40rc13dVgdB04t89/1O/w1cDnyilFU=')
+handler = WebhookHandler('b4f29d84ef99d4145e5ee81397ce5177')
 
 interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
+
+model = tf.keras.models.load_model("pill_classifier_model.h5")
+
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
+tflite_model = converter.convert()
+
+with open("pill_classifier_model.tflite", "wb") as f:
+    f.write(tflite_model)
 
 @app.route("/")
 def home():
