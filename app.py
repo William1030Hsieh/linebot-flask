@@ -101,9 +101,9 @@ def detect_pills(image_path):
         cv2.putText(output, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (36,255,12), 2)
 
         interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
-interpreter.allocate_tensors()
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
+        interpreter.allocate_tensors()
+        input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
 class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
     result_text = "\n".join([f"{k}：{v} 顆" for k, v in counts.items() if v > 0])
     cv2.imwrite("annotated_pills.jpg", output)
