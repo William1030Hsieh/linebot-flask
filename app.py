@@ -21,8 +21,20 @@ class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
 
 model = tf.keras.models.load_model("pill_classifier_model.h5")
 
+converter = tf.lite.TFLiteConverter.from_saved_model('pill_classifier_model.tflite')
+tflite_model = converter.convert()
+
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
 tflite_model = converter.convert()
+
+try:
+    interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
+    print("Model loaded successfully.")
+except ValueError as e:
+    print("Model load failed:", e)
+
+with open('pill_classifier_model.tflite', 'wb') as f:
+    f.write(tflite_model)
 
 with open("pill_classifier_model.tflite", "wb") as f:
     f.write(tflite_model)
