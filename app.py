@@ -63,7 +63,7 @@ def handle_image(event):
                 tflite_model = converter.convert()
 
                 converter = tf.lite.TFLiteConverter.from_keras_model(model)
-tflite_model = converter.convert()
+                tflite_model = converter.convert()
             )
         ]
     )
