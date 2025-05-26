@@ -57,13 +57,16 @@ def handle_image(event):
                 original_content_url=request.url_root + "image",
                 preview_image_url=request.url_root + "image"
                 model = tf.keras.models.load_model("pill_classifier_model.h5")
-                model = tf.keras.models.load_model("pill_classifier_model.h5")
-
-                converter = tf.lite.TFLiteConverter.from_saved_model('pill_classifier_model.tflite')
-                tflite_model = converter.convert()
 
                 converter = tf.lite.TFLiteConverter.from_keras_model(model)
                 tflite_model = converter.convert()
+                    
+                
+                #儲存為 .tflite檔案
+                with open(""pill_classifier_model.tflite","wb")as f:
+                    f.write(tflite_model)
+                
+                print("轉換完成, .tflite 檔案已建立")                
             )
         ]
     )
