@@ -15,17 +15,14 @@ handler = WebhookHandler('b4f29d84ef99d4145e5ee81397ce5177')
 
 
 
-try:
-    interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
-    print("Model loaded successfully.")
-except ValueError as e:
-    print("Model load failed:", e)
+# 載入 TFLite 模型（只載入一次） # FIXED
+interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
+interpreter.allocate_tensors()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
-with open('pill_classifier_model.tflite', 'wb') as f:
-    f.write(tflite_model)
-
-with open("pill_classifier_model.tflite", "wb") as f:
-    f.write(tflite_model)
+# 定義藥丸類別 # FIXED
+class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
 
 @app.route("/")
 def home():
@@ -43,33 +40,31 @@ def callback():
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
-    message_content = line_bot_api.get_message_content(event.message.id)
-    image_path = "pills.jpg"
-    with open(image_path, 'wb') as f:
-        for chunk in message_content.iter_content():
-            f.write(chunk)
-    result_text, annotated_path = detect_pills(image_path)
-    line_bot_api.reply_message(
-        event.reply_token,
-        [
-            TextSendMessage(text=result_text),
-            ImageSendMessage(
-                original_content_url=request.url_root + "image",
-                preview_image_url=request.url_root + "image"
-                model = tf.keras.models.load_model("pill_classifier_model.h5")
+    try:
+        message_content = line_bot_api.get_message_content(event.message.id)
+        image_path = "pills.jpg"
+        with open(image_path, 'wb') as f:
+            for chunk in message_content.iter_content():
+                f.write(chunk)
 
-                converter = tf.lite.TFLiteConverter.from_keras_model(model)
-                tflite_model = converter.convert()
-                    
-                
-                #儲存為 .tflite檔案
-                with open(""pill_classifier_model.tflite","wb")as f:
-                    f.write(tflite_model)
-                
-                print("轉換完成, .tflite 檔案已建立")                
-            )
-        ]
-    )
+        result_text, annotated_path = detect_pills(image_path)
+
+        line_bot_api.reply_message(
+            event.reply_token,
+            [
+                TextSendMessage(text=result_text),
+                ImageSendMessage(
+                    original_content_url=request.url_root + "image",
+                    preview_image_url=request.url_root + "image"
+                )
+            ]
+        )
+    except Exception as e:
+        print(f"錯誤：{e}")
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="圖片處理失敗，請稍後再試")
+        )
 
 @app.route("/image")
 def send_image():
@@ -103,16 +98,10 @@ def detect_pills(image_path):
         cv2.rectangle(output, (x, y), (x+w, y+h), (0, 255, 0), 2)
         cv2.putText(output, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (36,255,12), 2)
 
-        interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
-        interpreter.allocate_tensors()
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
-class_labels = ['green_capsule', 'red_capsule', 'white_capsule', 'yellow_pill']
     result_text = "\n".join([f"{k}：{v} 顆" for k, v in counts.items() if v > 0])
     cv2.imwrite("annotated_pills.jpg", output)
     return result_text, "annotated_pills.jpg"
 
 if __name__ == "__main__":
-     port = int(os.environ.get('PORT', 10000))
-     app.run(host='0.0.0.0', port=port)
-     #app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
