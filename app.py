@@ -1,3 +1,5 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
 from flask import Flask, request, abort, send_file
 from linebot import LineBotApi, WebhookHandler

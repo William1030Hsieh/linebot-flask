@@ -1,6 +1,3 @@
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
-
 import tensorflow as tf
 
 # 讀取你訓練好的 .h5 模型
