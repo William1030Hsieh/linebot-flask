@@ -19,7 +19,7 @@ handler = WebhookHandler('b4f29d84ef99d4145e5ee81397ce5177')
 
 # 載入 TFLite 模型（只載入一次） # FIXED
 interpreter = tf.lite.Interpreter(model_path="pill_classifier_model.tflite")
-i#nterpreter = Interpreter(model_path="pill_classifier_model.tflite")
+#interpreter = Interpreter(model_path="pill_classifier_model.tflite")
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
